@@ -76,11 +76,14 @@ namespace impl
 typedef std::string LibraryPath;
 typedef std::string ClassName;
 typedef std::string BaseClassName;
-typedef std::map<ClassName, impl::AbstractMetaObjectBase *> FactoryMap;
+typedef std::map<ClassName, std::shared_ptr<impl::AbstractMetaObjectBase>> FactoryMap;
 typedef std::map<BaseClassName, FactoryMap> BaseToFactoryMapMap;
 typedef std::pair<LibraryPath, std::shared_ptr<rcpputils::SharedLibrary>> LibraryPair;
 typedef std::vector<LibraryPair> LibraryVector;
-typedef std::vector<AbstractMetaObjectBase *> MetaObjectVector;
+typedef std::vector<std::shared_ptr<AbstractMetaObjectBase>> MetaObjectVector;
+
+CLASS_LOADER_PUBLIC
+MetaObjectVector & getMetaObjectGraveyard();
 
 CLASS_LOADER_PUBLIC
 void printDebugInfoToScreen();
@@ -240,8 +243,8 @@ void registerPlugin(const std::string & class_name, const std::string & base_cla
   }
 
   // Create factory
-  impl::AbstractMetaObject<Base> * new_factory =
-    new impl::MetaObject<Derived, Base>(class_name, base_class_name);
+  auto new_factory =
+    std::make_shared<impl::MetaObject<Derived, Base>>(class_name, base_class_name);
   new_factory->addOwningClassLoader(getCurrentlyActiveClassLoader());
   new_factory->setAssociatedLibraryPath(getCurrentlyLoadingLibraryName());
 
@@ -266,7 +269,7 @@ void registerPlugin(const std::string & class_name, const std::string & base_cla
   CONSOLE_BRIDGE_logDebug(
     "class_loader.impl: "
     "Registration of %s complete (Metaobject Address = %p)",
-    class_name.c_str(), reinterpret_cast<void *>(new_factory));
+    class_name.c_str(), reinterpret_cast<void *>(new_factory.get()));
 }
 
 /**
@@ -285,7 +288,7 @@ Base * createInstance(const std::string & derived_class_name, ClassLoader * load
   getPluginBaseToFactoryMapMapMutex().lock();
   FactoryMap & factoryMap = getFactoryMapForBaseClass<Base>();
   if (factoryMap.find(derived_class_name) != factoryMap.end()) {
-    factory = dynamic_cast<impl::AbstractMetaObject<Base> *>(factoryMap[derived_class_name]);
+    factory = dynamic_cast<impl::AbstractMetaObject<Base> *>(factoryMap[derived_class_name].get());
   } else {
     CONSOLE_BRIDGE_logError(
       "class_loader.impl: No metaobject exists for class type %s.", derived_class_name.c_str());
@@ -342,7 +345,7 @@ std::vector<std::string> getAvailableClasses(const ClassLoader * loader)
   std::vector<std::string> classes_with_no_owner;
 
   for (auto & it : factory_map) {
-    AbstractMetaObjectBase * factory = it.second;
+    auto factory = it.second;
     if (factory->isOwnedBy(loader)) {
       classes.push_back(it.first);
     } else if (factory->isOwnedBy(nullptr)) {
