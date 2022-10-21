@@ -2,6 +2,11 @@
 Changelog for package class_loader
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.3.1 (2022-09-13)
+------------------
+* Mirror rolling to ros2
+* Contributors: Audrow Nash
+
 2.3.0 (2022-05-10)
 ------------------
 
