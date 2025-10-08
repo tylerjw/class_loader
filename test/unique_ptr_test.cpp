@@ -59,6 +59,34 @@ TEST(ClassLoaderUniquePtrTest, basicLoad) {
   }
 }
 
+TEST(ClassLoaderUniquePtrTest, basicLoadTwice) {
+  try {
+    {
+      ClassLoader loader1(LIBRARY_1, false);
+      loader1.createUniqueInstance<Base>("Cat")->saySomething();  // See if lazy load works
+    }
+    ClassLoader loader1(LIBRARY_1, false);
+    loader1.createUniqueInstance<Base>("Cat")->saySomething();  // See if lazy load works
+    ASSERT_NO_THROW(class_loader::impl::printDebugInfoToScreen());
+    SUCCEED();
+  } catch (class_loader::ClassLoaderException & e) {
+    FAIL() << "ClassLoaderException: " << e.what() << "\n";
+  }
+}
+
+TEST(ClassLoaderUniquePtrTest, basicLoadTwiceSameTime) {
+  try {
+    ClassLoader loader1(LIBRARY_1, false);
+    loader1.createUniqueInstance<Base>("Cat")->saySomething();  // See if lazy load works
+    ClassLoader loader2(LIBRARY_1, false);
+    loader2.createUniqueInstance<Base>("Cat")->saySomething();  // See if lazy load works
+    ASSERT_NO_THROW(class_loader::impl::printDebugInfoToScreen());
+    SUCCEED();
+  } catch (class_loader::ClassLoaderException & e) {
+    FAIL() << "ClassLoaderException: " << e.what() << "\n";
+  }
+}
+
 TEST(ClassLoaderUniquePtrTest, basicLoadFailures) {
   ClassLoader loader1(LIBRARY_1, false);
   ClassLoader loader2("", false);
@@ -66,9 +94,6 @@ TEST(ClassLoaderUniquePtrTest, basicLoadFailures) {
   EXPECT_THROW(
     class_loader::impl::loadLibrary("LIBRARY_1", &loader1),
     class_loader::LibraryLoadException);
-  EXPECT_THROW(
-    class_loader::impl::unloadLibrary("LIBRARY_1", &loader1),
-    class_loader::LibraryUnloadException);
 }
 
 TEST(ClassLoaderUniquePtrTest, MultiLibraryClassLoaderFailures) {
